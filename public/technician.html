@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technician Dashboard</title>
+  <link rel="stylesheet" href="assets/style.css" />
+    <link rel="stylesheet" href="assets/tokens.css" />
+  <link rel="icon" type="image/png" href="assets/icon-512.png" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-row">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img class="brand-logo" src="assets/icon-512.png" alt="BezAsset" />
+        <strong>Technician</strong>
+      </div>
+      <nav class="nav" style="display:flex;gap:8px;align-items:center;">
+        <a class="button ghost" href="/index.html">Home</a>
+        <a class="button ghost" href="/client.html">Client</a>
+        <a class="button ghost" href="/admin.html">Admin</a>
+      </nav>
+    </div>
+  </section>
+  <section class="hero tech-hero">
+    <div class="hero-content">
+      <h1>Technician Dashboard</h1>
+      <p class="muted tagline">Sign in to continue.</p>
+      <div id="tech-login-controls" class="auth-card" style="display:none;">
+        <div class="form-field">
+          <label for="tech-login-email">Email</label>
+          <input id="tech-login-email" type="email" placeholder="you@example.com" />
+        </div>
+        <div class="form-field">
+          <label for="tech-login-pass">Password</label>
+          <input id="tech-login-pass" type="password" placeholder="••••••••" />
+        </div>
+        <div class="form-actions">
+          <button id="tech-login-btn" class="button primary" aria-label="Login">Login</button>
+        </div>
+        <div id="tech-login-status" class="muted"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Testing panel removed for production cleanliness -->
+
+  <main class="container" style="display:none;">
+    <section class="card" id="tech-session-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <span id="tech-session-line" class="muted">Sign in to continue.</span>
+        <span id="sync-indicator" class="muted" style="margin-left:auto;"></span>
+        <div class="actions">
+
+          <button id="tech-refresh-btn" class="button ghost" aria-label="Refresh">Refresh</button>
+          <button id="tech-logout-btn" class="button ghost" aria-label="Logout">Logout</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="tech-customer-card">
+      <h2>Customer Visit</h2>
+      <p class="muted">Select a customer to continue.</p>
+      <div class="field" style="max-width:520px;">
+        <label for="tech-customer">Customer</label>
+        <div class="field small-inline">
+          <select id="tech-customer"></select>
+          <a href="#" id="tech-customer-rename-btn" class="button ghost">Rename</a>
+          <a href="#" id="tech-customer-delete-btn" class="button ghost">Delete</a>
+        </div>
+        <span id="tech-customer-status" class="muted" style="display:block; margin-top:6px;"></span>
+      </div>
+      <div id="tech-customer-banner" class="banner" style="display:none; max-width:520px; margin-top:12px;">
+        <span class="muted">Choose a customer to continue.</span>
+      </div>
+    </section>
+
+    <section class="card" id="customers-card">
+      <h2>Manage Customers</h2>
+      <div class="actions" style="flex-wrap:wrap;">
+        <a href="#" id="tech-customer-add-open" class="button">Add Customer</a>
+      </div>
+      <div id="tech-customer-add-row" class="field small-inline" style="display:none; max-width:520px;">
+        <input id="tech-customer-new-name" type="text" placeholder="Customer name" />
+        <a href="#" id="tech-customer-save-btn" class="button primary">Save</a>
+        <a href="#" id="tech-customer-cancel-btn" class="button ghost">Cancel</a>
+        <span id="tech-customer-add-status" class="muted"></span>
+      </div>
+      <p id="customers-empty" class="muted">No customers yet.</p>
+      <div class="table-wrapper">
+        <table id="customers-table" class="table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customers-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <section class="card" id="tech-nfc-card">
+      <h2>NFC Scan</h2>
+      <div class="actions">
+        <button id="tech-scan-btn" class="button" aria-label="Start NFC scan">Scan NFC</button>
+      </div>
+      <div id="tech-scan-result" class="scan-result muted">Nothing scanned yet.</div>
+    </section>
+
+    <section class="card" id="tech-asset-card">
+      <h2>Add Asset</h2>
+      <form id="tech-asset-form">
+        <div class="field">
+          <label for="tech-name">Name</label>
+          <input id="tech-name" type="text" placeholder="e.g., Laptop 15" required />
+        </div>
+        <div class="field">
+          <label for="tech-location">Location</label>
+          <input id="tech-location" type="text" placeholder="e.g., Room 204" />
+        </div>
+        <div class="field">
+          <label for="tech-serial">Serial</label>
+          <input id="tech-serial" type="text" placeholder="e.g., SN-123456" />
+        </div>
+        <div class="field">
+          <label for="tech-category">Category</label>
+          <input id="tech-category" type="text" placeholder="e.g., Laptop" />
+        </div>
+        <div class="field">
+          <label for="tech-tagPayload">Tag Payload</label>
+          <div class="scan-row">
+            <input id="tech-tagPayload" type="text" placeholder="Scan or paste payload (e.g., asset:123)" />
+            <button type="button" id="tech-scan-form-btn" class="button" aria-label="Open NFC scanner">Scan NFC</button>
+            <button type="button" id="tech-write-btn" class="button ghost" aria-label="Write data to NFC tag">Write NFC</button>
+          </div>
+          <div class="field small-inline">
+            <label for="tech-write-type">Write Type</label>
+            <select id="tech-write-type">
+              <option value="text">Text</option>
+              <option value="url">URL</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tech-status">Status</label>
+          <select id="tech-status">
+            <option value="in_stock">In Stock</option>
+            <option value="assigned">Assigned</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tech-photo">Product Image</label>
+          <input id="tech-photo" type="file" accept="image/*" capture="environment" />
+          <div class="help">Optional. Take a photo or pick from gallery.</div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="button primary" aria-label="Add asset">Add Asset</button>
+          <button type="reset" class="button ghost" aria-label="Reset asset form">Reset</button>
+        </div>
+      </form>
+      <p id="tech-scan-status" class="status"></p>
+    </section>
+
+    <section class="card" id="tech-assets-list-card">
+      <h2>Assets</h2>
+      <div class="field">
+        <label for="tech-search">Search</label>
+        <input id="tech-search" type="text" placeholder="Filter by name, location, payload, or status" />
+      </div>
+      <ul id="tech-asset-list" class="asset-list"></ul>
+      <p id="tech-empty-note" class="muted">No assets yet. Add one above.</p>
+    </section>
+
+
+    <!-- Maintenance (parity with client dashboard) -->
+    <section class="card" id="maint-card">
+      <h2>Maintenance</h2>
+      <form id="maint-form" class="grid-2">
+        <div class="field">
+          <label for="maint-asset">Asset</label>
+          <select id="maint-asset"></select>
+        </div>
+        <div class="field">
+          <label for="maint-desc">Description</label>
+          <input id="maint-desc" type="text" placeholder="e.g., Replaced battery" />
+        </div>
+        <div class="field">
+          <label for="maint-status">Status</label>
+          <select id="maint-status">
+            <option value="scheduled">Scheduled</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="maint-next">Next Due</label>
+          <input id="maint-next" type="date" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="button primary" aria-label="Add maintenance log">Add Log</button>
+        </div>
+      </form>
+      <p id="maint-status-msg" class="status"></p>
+      <div class="table-wrapper">
+        <table class="table" id="maint-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Asset</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Next Due</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Assignment creation (parity with client dashboard) -->
+    <section class="card" id="assign-card">
+      <h2>Assignments</h2>
+      <form id="assign-form" class="grid-2">
+        <div class="field">
+          <label for="assign-asset">Asset</label>
+          <select id="assign-asset"></select>
+        </div>
+        <div class="field">
+          <label for="assign-to">Assignee</label>
+          <input id="assign-to" type="text" placeholder="e.g., John Doe / IT" />
+        </div>
+        <div class="field">
+          <label for="assign-customer">Customer</label>
+          <select id="assign-customer"></select>
+        </div>
+        <div class="field">
+          <label for="assign-start">Start</label>
+          <input id="assign-start" type="date" />
+        </div>
+        <div class="field">
+          <label for="assign-due">Due</label>
+          <input id="assign-due" type="date" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="button" aria-label="Add assignment">Add Assignment</button>
+        </div>
+      </form>
+      <p id="assign-status-msg" class="status"></p>
+      <div class="table-wrapper">
+        <table class="table" id="assign-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Asset</th>
+              <th>Assignee</th>
+              <th>Customer</th>
+              <th>Start</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Reports (summary, exports, chart, pivot, schedule) -->
+    <section class="card" id="reports-card">
+      <h2>Reports</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label for="export-range">Range</label>
+          <select id="export-range">
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="export-start">Start</label>
+          <input id="export-start" type="date" />
+        </div>
+        <div class="field">
+          <label for="export-end">End</label>
+          <input id="export-end" type="date" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="export-assets-excel" aria-label="Export assets Excel">Export Assets Excel</button>
+        <button id="export-maint-excel" aria-label="Export maintenance Excel">Export Maintenance Excel</button>
+        <button id="export-assign-excel" aria-label="Export assignments Excel">Export Assignments Excel</button>
+        <button id="export-assets-pdf" class="ghost" aria-label="Export assets as PDF">Export Assets PDF</button>
+        <button id="export-maint-pdf" class="ghost" aria-label="Export maintenance as PDF">Export Maintenance PDF</button>
+        <button id="export-assignments-pdf" class="ghost" aria-label="Export assignments as PDF">Export Assignments PDF</button>
+        
+        <button id="export-assets-excel" onclick="window.exportAssetsExcel()" aria-label="Export assets as Excel">Export Assets Excel</button>
+        <button id="export-maint-excel" onclick="window.exportMaintenanceExcel()" aria-label="Export maintenance as Excel">Export Maintenance Excel</button>
+        <button id="export-assign-excel" onclick="window.exportAssignmentsExcel()" aria-label="Export assignments as Excel">Export Assignments Excel</button>
+        <button id="export-assets-doc" class="ghost" onclick="window.exportAssetsDocument()" aria-label="Export Assets Document">Export Assets Document</button>
+      </div>
+      
+      <h3>Scheduled Export</h3>
+      <div class="schedule">
+        <div class="grid-2">
+          <div class="field">
+            <label for="sched-report">Report</label>
+            <select id="sched-report">
+              <option value="assets">Assets</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="assignments">Assignments</option>
+              <option value="logs">Logs</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sched-frequency">Frequency</label>
+            <select id="sched-frequency">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sched-time">Time</label>
+            <input id="sched-time" type="time" />
+          </div>
+          <div class="field">
+            <label for="sched-email">Email</label>
+            <input id="sched-email" type="email" placeholder="you@example.com (demo)" />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="save-schedule" aria-label="Save scheduled export">Save Schedule</button>
+          <span id="schedule-status" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scan Result (parity with client dashboard) -->
+    <section class="card" id="scan-result-card">
+      <h2>Scan Result</h2>
+      <div id="scan-result" class="scan-result muted">Nothing scanned yet.</div>
+    </section>
+
+    <!-- Logs (parity with client dashboard) -->
+    <section class="card" id="logs-card">
+      <h2>Logs</h2>
+      <table class="table" id="log-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Payload</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Libraries for parity features -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="assets/exports.js"></script>
+  <script src="assets/nav.js"></script>
+  <script src="assets/install.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(err => console.warn('SW registration failed', err));
+    }
+  </script>
+  <footer class="site-footer">
+    <div class="container" style="padding:16px;text-align:center;color:#6b7280;">© BezAsset Tracker</div>
+  </footer>
+</body>
+</html>

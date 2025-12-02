@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="/api/env"></script>
+    <script>
+      (function(){
+        try {
+          var origFetch = window.fetch ? window.fetch.bind(window) : null;
+          if (origFetch) {
+            window.fetch = function(resource, init){
+              return origFetch(resource, init);
+            };
+          }
+        } catch {}
+      })();
+    </script>
+    <title>Admin Login • BezAsset Tracker</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="stylesheet" href="assets/tokens.css" />
+    <link rel="manifest" href="manifest-admin.json" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img class="brand-logo" src="assets/icon-512.png" alt="BezAsset" />
+          <strong>Admin</strong>
+        </div>
+        <nav class="nav" style="display:flex;gap:8px;align-items:center;">
+          <a class="button ghost" href="index.html">Home</a>
+          <a class="button ghost" href="client.html">Client</a>
+          <a class="button ghost" href="technician.html">Technician</a>
+        </nav>
+      </div>
+    </header>
+    <main class="hero hero-gradient">
+      <div class="hero-content">
+        <h1>Admin Login</h1>
+        <p class="muted">Sign in to manage clients, users, and settings.</p>
+
+        <form id="admin-login" class="auth-card" style="max-width:480px; margin:0 auto;">
+          <div class="field">
+            <label for="admin-email">Email</label>
+            <input id="admin-email" type="email" placeholder="you@example.com" required />
+          </div>
+          <div class="field">
+            <label for="admin-pass">Password</label>
+            <input id="admin-pass" type="password" placeholder="••••••••" required />
+          </div>
+          <div class="actions">
+            <button type="submit" class="button primary" aria-label="Admin login">Login</button>
+            <a href="index.html" class="button ghost">Back</a>
+          </div>
+          <p id="admin-status" class="muted" style="text-align:center;"></p>
+        </form>
+      </div>
+    </main>
+    <section class="container" id="admin-panel" style="display:none;">
+      <h2>Manage Clients and Users</h2>
+      <p class="muted">Create client and technician accounts with a streamlined flow.</p>
+        <div class="actions" style="margin-bottom:12px;">
+        <button id="admin-logout-btn" class="button ghost" aria-label="Logout">Logout</button>
+        <a class="button ghost" href="/app/admin/token-editor.html">Token Editor</a>
+      </div>
+      
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+        <form id="create-client-form" class="card">
+          <h3>Create Client</h3>
+          <div class="field">
+            <label for="client-name">Business Name</label>
+            <input id="client-name" type="text" placeholder="e.g., Acme Corp" required />
+          </div>
+          <div class="field">
+            <label for="client-email">Client Email</label>
+            <input id="client-email" type="email" placeholder="owner@acme.com" required />
+          </div>
+          <div class="field">
+            <label for="client-pass">Password</label>
+            <input id="client-pass" type="password" placeholder="••••••••" required />
+          </div>
+          <div class="actions">
+            <button type="submit" class="button primary" aria-label="Create client">Create Client</button>
+            <span id="create-client-status" class="muted"></span>
+          </div>
+        </form>
+
+        <form id="create-tech-form" class="card">
+          <h3>Create Technician</h3>
+          <div class="field">
+            <label for="tech-client">Client</label>
+            <select id="tech-client"></select>
+          </div>
+          <div class="field">
+            <label for="tech-name">Technician Name</label>
+            <input id="tech-name" type="text" placeholder="e.g., Jane Doe" required />
+          </div>
+          <div class="field">
+            <label for="tech-email">Technician Email</label>
+            <input id="tech-email" type="email" placeholder="jane@example.com" required />
+          </div>
+          <div class="field">
+            <label for="tech-pass">Password</label>
+            <input id="tech-pass" type="password" placeholder="••••••••" required />
+          </div>
+          <div class="actions">
+            <button type="submit" class="button primary" aria-label="Create technician">Create Technician</button>
+            <span id="create-tech-status" class="muted"></span>
+          </div>
+        </form>
+      </div>
+
+      <div style="margin-top:16px;">
+        <h3>Overview</h3>
+        <div class="two-col">
+          <div>
+            <h4 class="muted">Clients</h4>
+            <div class="table-wrapper">
+              <table class="table" id="clients-table">
+                <thead><tr><th>Client ID</th><th>Name</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h4 class="muted">Users</h4>
+            <div class="table-wrapper">
+              <table class="table" id="users-table">
+                <thead><tr><th>User ID</th><th>Email</th><th>Role</th><th>Client</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3>Provision Supabase</h3>
+          <p class="muted">Create minimal PWA tables in Supabase.</p>
+          <div class="field">
+            <label for="setup-token">Setup Token</label>
+            <input id="setup-token" type="text" placeholder="Enter BOOTSTRAP_TOKEN" />
+          </div>
+          <div class="actions">
+            <button id="setup-run" class="button primary">Run Setup</button>
+            <span id="setup-status" class="muted"></span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+    
+
+    <script src="/assets/dev-mode.js"></script>
+    <script src="/assets/delta-sync-v2.js"></script>
+    <script src="app/branding-loader.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').catch(err => console.warn('SW registration failed', err));
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="/assets/supabase-sync.js?v=7"></script>
+    <script src="/assets/admin.js?v=7"></script>
+    <script src="assets/nav.js"></script>
+    <script>
+      (function(){
+        function openWithToken(target){
+          try {
+            var url = '/api/pwa/token';
+            fetch(url).then(function(r){
+              if (!r.ok) throw new Error('Unauthorized');
+              return r.json();
+            }).then(function(j){
+              var t = j && j.token;
+              var connectUrl = j && j.connectUrl;
+              if (t) { try { localStorage.setItem('VS_TOKEN', t); } catch {} }
+              var dest = target === 'tech' ? (location.origin + '/technician.html') : (location.origin + '/client.html');
+              if (connectUrl && typeof connectUrl === 'string') {
+                dest = connectUrl;
+              }
+              if (t) {
+                var u = new URL(dest);
+                u.searchParams.set('token', t);
+                dest = u.toString();
+              }
+              location.href = dest;
+            }).catch(function(err){
+              var status = document.getElementById('connect-status');
+              if (status) status.textContent = 'Connect failed. Sign in on admin host first.';
+            });
+          } catch {}
+        }
+        var btnC = document.getElementById('connect-client-btn');
+        var btnT = document.getElementById('connect-tech-btn');
+        if (btnC) btnC.addEventListener('click', function(){ openWithToken('client'); });
+        if (btnT) btnT.addEventListener('click', function(){ openWithToken('tech'); });
+      })();
+    </script>
+    <script>
+      (function(){
+        var btn = document.getElementById('setup-run');
+        var input = document.getElementById('setup-token');
+        var status = document.getElementById('setup-status');
+        function run(){
+          try {
+            var token = (input && input.value) || '';
+            if (!token) { if (status) status.textContent = 'Enter token.'; return; }
+            fetch('/api/supabase/setup', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-setup-token': token }, body: JSON.stringify({}) })
+              .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+              .then(function(res){ if (status) status.textContent = res.ok ? 'Setup completed.' : ('Setup failed: ' + (res.j && (res.j.error || res.j.message) || '')); })
+              .catch(function(){ if (status) status.textContent = 'Setup failed.'; });
+          } catch {}
+        }
+        if (btn) btn.addEventListener('click', run);
+      })();
+    </script>
+    <footer class="site-footer">
+      <div class="container" style="padding:16px;text-align:center;color:#6b7280;">© BezAsset Tracker</div>
+    </footer>
+  </body>
+  </html>

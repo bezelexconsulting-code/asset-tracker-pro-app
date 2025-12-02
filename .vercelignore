@@ -1,0 +1,14 @@
+node_modules
+.next
+.env*.local
+.git
+.vscode
+.idea
+*.log
+coverage
+.DS_Store
+Thumbs.db
+prisma/dev.db
+prisma/dev.db-journal
+src/generated/prisma/runtime/wasm-engine-edge.js
+src/generated/prisma/runtime/library.js

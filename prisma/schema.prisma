@@ -1,0 +1,283 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactName   String   // Owner/Manager name
+  email         String   @unique
+  phone         String?
+  address       String?
+  logo          String?  // URL to company logo
+  primaryColor  String?  // Hex color for branding
+  secondaryColor String? // Secondary brand color
+  accentColor   String?  // Accent color for highlights
+  customDomain  String?  // Custom subdomain (e.g., clientname.assettracker.com)
+  favicon       String?  // URL to custom favicon
+  loginBgImage  String?  // Custom login background image
+  dashboardTheme String @default("light") // light, dark, auto
+  timezone      String   @default("UTC")
+  dateFormat    String   @default("MM/dd/yyyy")
+  currency      String   @default("USD")
+  language      String   @default("en")
+  status        String   @default("ACTIVE") // ACTIVE, SUSPENDED, CANCELLED
+  workerLimit   Int      @default(5)  // How many workers they can add
+  pricePerWorker Float   @default(25.0) // Price per worker per month
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  users         User[]
+  devices       Device[]
+  invoices      Invoice[]
+  items         Item[]
+  subClients    SubClient[]
+  workers       Worker[]
+}
+
+model SubClient {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  email     String?
+  phone     String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client    Client   @relation(fields: [clientId], references: [id])
+  nfcTaps   NFCTap[]
+  items     Item[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("WORKER") // SUPER_ADMIN, CLIENT_ADMIN, WORKER
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  clientId  String?
+  isSuperAdmin Boolean @default(false) // For platform owner access
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client     Client?  @relation(fields: [clientId], references: [id])
+  assignments    Assignment[]
+  checkInOuts    CheckInOut[]
+  maintenanceRecords MaintenanceRecord[]
+  excelExports   ExcelExport[]
+  
+  @@map("users")
+}
+
+// New Worker model for clients to manage their workers
+model Worker {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  email     String   @unique
+  phone     String?
+  position  String?
+  department String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  paymentStatus String @default("PENDING") // PENDING, PAID, OVERDUE
+  monthlyFee Float   @default(25.0)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client    Client   @relation(fields: [clientId], references: [id])
+  
+  @@map("workers")
+}
+
+model Item {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  category       String?
+  serialNumber   String   @unique
+  model          String?
+  manufacturer   String?
+  purchaseDate   DateTime?
+  purchasePrice  Float?
+  currentValue   Float?
+  location       String?
+  condition      String?
+  notes          String?
+  nfcTagId       String?  @unique
+  status         String   @default("AVAILABLE") // AVAILABLE, ASSIGNED, CHECKED_OUT, IN_MAINTENANCE, RETIRED, LOST, DAMAGED
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
+  subClientId    String?
+  subClient      SubClient? @relation(fields: [subClientId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  nfcTag         NFCTag?
+  images         ItemImage[]
+  assignments    Assignment[]
+  checkInOuts    CheckInOut[]
+  maintenanceRecords MaintenanceRecord[]
+
+  @@map("items")
+}
+
+model NFCTag {
+  id        String   @id @default(cuid())
+  tagId     String   @unique
+  data      String?  // JSON data stored on the tag
+  itemId    String?  @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  item      Item?    @relation(fields: [itemId], references: [id])
+  nfcTaps   NFCTap[]
+
+  @@map("nfc_tags")
+}
+
+model ItemImage {
+  id        String   @id @default(cuid())
+  itemId    String
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  url       String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("item_images")
+}
+
+model Assignment {
+  id        String   @id @default(cuid())
+  itemId    String
+  userId    String
+  assignedAt DateTime @default(now())
+  returnedAt DateTime?
+  notes     String?
+  status    String   @default("ACTIVE") // ACTIVE, RETURNED, OVERDUE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  item      Item     @relation(fields: [itemId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model CheckInOut {
+  id        String   @id @default(cuid())
+  itemId    String
+  userId    String
+  type      String   // CHECK_IN, CHECK_OUT
+  timestamp DateTime @default(now())
+  location  String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  item      Item     @relation(fields: [itemId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("check_in_outs")
+}
+
+model MaintenanceRecord {
+  id          String   @id @default(cuid())
+  itemId      String
+  userId      String
+  type        String   // PREVENTIVE, CORRECTIVE, INSPECTION, CALIBRATION, REPAIR
+  description String
+  cost        Float?
+  performedAt DateTime @default(now())
+  nextDue     DateTime?
+  status      String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  item        Item     @relation(fields: [itemId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("maintenance_records")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  clientId  String
+  deviceId  String   @unique
+  name      String
+  type      String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client    Client   @relation(fields: [clientId], references: [id])
+}
+
+model Invoice {
+  id                    String   @id @default(cuid())
+  clientId              String
+  invoiceNumber         String   @unique
+  amount                Float
+  workerCount           Int      // Number of workers being billed for
+  status                String   @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
+  bankTransferReference String?
+  dueDate               DateTime
+  paidAt                DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  client                Client   @relation(fields: [clientId], references: [id])
+}
+
+model NFCTap {
+  id          String   @id @default(cuid())
+  subClientId String
+  nfcTagId    String
+  location    String?
+  notes       String?
+  tappedAt    DateTime @default(now())
+  exported    Boolean  @default(false)
+  exportedAt  DateTime?
+
+  // Relations
+  subClient   SubClient @relation(fields: [subClientId], references: [id])
+  nfcTag      NFCTag    @relation(fields: [nfcTagId], references: [id])
+}
+
+model ExcelExport {
+  id        String   @id @default(cuid())
+  userId    String
+  filename  String
+  type      String   // INVENTORY, CHECK_IN_OUT, MAINTENANCE, ASSIGNMENTS, FULL_REPORT, NFC_TAPS
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+}

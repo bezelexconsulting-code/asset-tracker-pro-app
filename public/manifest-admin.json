@@ -1,0 +1,11 @@
+{
+  "name": "BezAsset Admin",
+  "short_name": "Admin",
+  "start_url": "/admin.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

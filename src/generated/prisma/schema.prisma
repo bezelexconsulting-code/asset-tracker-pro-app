@@ -1,0 +1,448 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Core application models
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  DISPOSED
+  CHECKED_OUT
+  RESERVED
+}
+
+enum CheckoutStatus {
+  CHECKED_OUT
+  CHECKED_IN
+  OVERDUE
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Organization relations
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  memberships        Membership[]
+
+  // Asset relations
+  createdAssets      Asset[] @relation("AssetCreator")
+  updatedAssets      Asset[] @relation("AssetUpdater")
+  assignedAssets     Asset[] @relation("AssetAssignee")
+  assignedAssetsByMe Asset[] @relation("AssetAssigner")
+
+  // Activity tracking
+  activities Activity[]
+
+  // Check-in/Check-out relations
+  checkouts AssetCheckout[]
+
+  // Maintenance relations
+  assignedMaintenanceRecords MaintenanceRecord[] @relation("MaintenanceAssignee")
+  createdMaintenanceRecords  MaintenanceRecord[] @relation("MaintenanceCreator")
+
+  // Invitations sent and received
+  sentInvitations     Invitation[] @relation("InvitationSender")
+  receivedInvitations Invitation[] @relation("InvitationReceiver")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Owner relation
+  ownerId String
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Members
+  memberships Membership[]
+  invitations Invitation[]
+
+  // Subscription
+  subscription Subscription?
+
+  // Assets
+  assets Asset[]
+
+  // Activities
+  activities Activity[]
+
+  // Invoices
+  invoices Invoice[]
+
+  // Asset checkouts
+  checkouts AssetCheckout[]
+
+  // Maintenance records
+  maintenanceRecords MaintenanceRecord[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId         String
+  organizationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model Invitation {
+  id        String           @id @default(cuid())
+  email     String
+  role      UserRole
+  status    InvitationStatus @default(PENDING)
+  token     String           @unique
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  organizationId String
+  senderId       String?
+  receiverId     String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation("InvitationSender", fields: [senderId], references: [id])
+  receiver     User?        @relation("InvitationReceiver", fields: [receiverId], references: [id])
+
+  @@unique([email, organizationId])
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  status             SubscriptionStatus @default(ACTIVE)
+  memberCount        Int                @default(1)
+  monthlyRate        Decimal            @default(0.00) @db.Decimal(10, 2)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices       Invoice[]
+}
+
+model Asset {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  barcode       String?     @unique
+  qrCode        String?     @unique
+  serialNumber  String?
+  model         String?
+  manufacturer  String?
+  category      String?
+  location      String?
+  status        AssetStatus @default(ACTIVE)
+  purchaseDate  DateTime?
+  purchasePrice Decimal?    @db.Decimal(10, 2)
+  currentValue  Decimal?    @db.Decimal(10, 2)
+  notes         String?
+  imageUrl      String?
+
+  // NFC Integration
+  nfcId   String? @unique
+  nfcData Json? // Store additional NFC tag data
+
+  // Assignment tracking
+  assignedToId String? // Currently assigned person
+  assignedAt   DateTime? // When it was assigned
+  assignedBy   String? // Who assigned it
+
+  // Check-in/Check-out tracking
+  currentCheckoutId String?   @unique
+  lastCheckedOut    DateTime?
+  lastCheckedIn     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organizationId String
+  createdById    String
+  updatedById    String?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation("AssetCreator", fields: [createdById], references: [id])
+  updatedBy      User?        @relation("AssetUpdater", fields: [updatedById], references: [id])
+  assignedTo     User?        @relation("AssetAssignee", fields: [assignedToId], references: [id])
+  assignedByUser User?        @relation("AssetAssigner", fields: [assignedBy], references: [id])
+
+  // Asset history and activities
+  activities Activity[]
+
+  // Check-in/Check-out history
+  checkouts AssetCheckout[]
+
+  // Maintenance records
+  maintenanceRecords MaintenanceRecord[]
+
+  @@index([organizationId])
+  @@index([barcode])
+  @@index([qrCode])
+  @@index([nfcId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String // e.g., "ASSET_CREATED", "ASSET_UPDATED", "ASSET_SCANNED", "USER_INVITED"
+  description String
+  metadata    Json? // Additional data about the activity
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userId         String
+  organizationId String
+  assetId        String?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  asset        Asset?       @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  invoiceNumber    String        @unique
+  status           InvoiceStatus @default(DRAFT)
+  issueDate        DateTime      @default(now())
+  dueDate          DateTime
+  paidDate         DateTime?
+  sentAt           DateTime?
+  lastReminderSent DateTime?
+
+  // Invoice details
+  memberCount Int
+  monthlyRate Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+  taxRate     Decimal @default(0.00) @db.Decimal(5, 2)
+  taxAmount   Decimal @default(0.00) @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  // Billing period
+  periodStart DateTime
+  periodEnd   DateTime
+
+  // Additional info
+  notes         String?
+  paymentMethod String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  organizationId String
+  subscriptionId String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Asset Check-in/Check-out System
+model AssetCheckout {
+  id     String         @id @default(cuid())
+  status CheckoutStatus @default(CHECKED_OUT)
+
+  // Checkout details
+  checkedOutAt DateTime  @default(now())
+  checkedInAt  DateTime?
+  dueDate      DateTime? // When it should be returned
+
+  // Purpose and notes
+  purpose  String? // Why it was checked out
+  notes    String?
+  location String? // Where it's being taken
+
+  // Condition tracking
+  conditionOut String? // Condition when checked out
+  conditionIn  String? // Condition when checked in
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assetId        String
+  userId         String // Person who checked it out
+  checkedOutBy   String // Person who processed the checkout
+  checkedInBy    String? // Person who processed the check-in
+  organizationId String
+
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Maintenance Management System
+model MaintenanceRecord {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  status      MaintenanceStatus   @default(SCHEDULED)
+  priority    MaintenancePriority @default(MEDIUM)
+
+  // Scheduling
+  scheduledDate DateTime
+  completedDate DateTime?
+  dueDate       DateTime?
+
+  // Cost tracking
+  estimatedCost Decimal? @db.Decimal(10, 2)
+  actualCost    Decimal? @db.Decimal(10, 2)
+
+  // Work details
+  workPerformed String?
+  partsUsed     String?
+  notes         String?
+
+  // Recurring maintenance
+  isRecurring       Boolean   @default(false)
+  recurringInterval Int? // Days between maintenance
+  nextDueDate       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assetId        String
+  assignedToId   String? // Technician assigned
+  createdById    String
+  organizationId String
+
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assignedTo   User?        @relation("MaintenanceAssignee", fields: [assignedToId], references: [id])
+  createdBy    User         @relation("MaintenanceCreator", fields: [createdById], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([assignedToId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([dueDate])
+}

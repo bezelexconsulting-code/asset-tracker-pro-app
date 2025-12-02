@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client Dashboard – Asset Tracker</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="stylesheet" href="assets/tokens.css" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#2563eb" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img class="brand-logo" src="assets/icon-512.png" alt="BezAsset" />
+          <strong>Client Dashboard</strong>
+        </div>
+        <nav class="nav" style="display:flex;gap:8px;align-items:center;">
+          <a class="button ghost" href="/index.html">Home</a>
+          <a class="button ghost" href="/technician.html">Technician</a>
+          <a class="button ghost" href="/admin.html">Admin</a>
+        </nav>
+      </div>
+      <p class="support-note" style="padding:0 16px;">Web NFC works on Android Chrome only. Desktop browsers may not support scanning.</p>
+    </header>
+
+    <!-- Login hero: clean centered card -->
+    <section class="hero hero-gradient" id="login-hero">
+      <div class="hero-content" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div class="auth-card">
+          <h2 class="h2" style="text-align:center; margin-bottom:8px;">Client Login</h2>
+          <div id="login-controls" style="display:block;">
+            <div class="field">
+              <label for="login-email">Username</label>
+              <input id="login-email" type="text" placeholder="Enter your username" />
+            </div>
+            <div class="field">
+              <label for="login-pass">Password</label>
+              <input id="login-pass" type="password" placeholder="Enter your password" />
+            </div>
+            <button id="client-login-btn" class="button primary" aria-label="Login" style="width:100%;">Login</button>
+            <p class="muted" style="text-align:center; margin-top:8px;">Demo: client@example.com / demo123</p>
+            <a href="#" id="forgot-link" class="forgot-link">Forgot Password?</a>
+            <span id="client-login-status" class="muted" style="text-align:center;"></span>
+          </div>
+          <div id="forgot-controls" class="hidden"></div>
+        </div>
+        <span id="sync-indicator" class="muted"></span>
+      </div>
+    </section>
+
+    <main id="main-content" class="container" style="display:none;">
+      <section class="card" id="select-customer-card">
+        <h2>Select Customer</h2>
+        <div class="field">
+          <label for="client-customer">Select Customer</label>
+          <select id="client-customer"></select>
+          <small class="muted">Technicians will use this selection.</small>
+        </div>
+      </section>
+      <!-- Branding card removed per request -->
+      <section class="card" id="add-asset-card">
+        <h2>Add Asset</h2>
+        <form id="asset-form">
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" placeholder="e.g., Laptop 15" required />
+          </div>
+          <div class="field">
+            <label for="location">Location</label>
+            <input id="location" name="location" type="text" placeholder="e.g., Room 204" />
+          </div>
+          <div class="field">
+            <label for="serial">Serial</label>
+            <input id="serial" name="serial" type="text" placeholder="e.g., SN-123456" />
+          </div>
+          <div class="field">
+            <label for="category">Category</label>
+            <input id="category" name="category" type="text" placeholder="e.g., Laptop" />
+          </div>
+          <div class="field">
+            <label for="tagPayload">Tag Payload</label>
+            <div class="scan-row">
+              <input id="tagPayload" name="tagPayload" type="text" placeholder="Scan or paste payload (e.g., asset:123)" />
+              <button type="button" id="scan-btn" class="button" aria-label="Scan NFC">Scan NFC</button>
+              <button type="button" id="write-btn" class="button ghost" aria-label="Write NFC">Write NFC</button>
+            </div>
+            <small>Tip: Encode your tags with a text record like <code>asset:YOUR_ID</code> or a URL.</small>
+            <div class="field small-inline">
+              <label for="write-type">Write Type</label>
+              <select id="write-type">
+                <option value="text">Text</option>
+                <option value="url">URL</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="asset-image">Product Image (optional)</label>
+            <input id="asset-image" type="file" accept="image/*" capture="environment" />
+          </div>
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="in_stock">In Stock</option>
+              <option value="assigned">Assigned</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button type="submit" class="button primary" aria-label="Add asset">Add Asset</button>
+            <button type="reset" class="button ghost" aria-label="Reset asset form">Reset</button>
+          </div>
+        </form>
+        <p id="scan-status" class="status"></p>
+      </section>
+
+      <section class="card">
+        <h2>Assets</h2>
+        <div class="field">
+          <label for="search">Search</label>
+          <input id="search" type="text" placeholder="Filter by name, location, payload, or status" />
+        </div>
+        <ul id="asset-list" class="asset-list"></ul>
+        <p id="empty-note" class="muted">No assets yet for this client. Add one above.</p>
+      </section>
+
+      <section class="card">
+        <h2>Maintenance</h2>
+        <form id="maint-form" class="grid-2">
+          <div class="field">
+            <label for="maint-asset">Asset</label>
+            <select id="maint-asset"></select>
+          </div>
+          <div class="field">
+            <label for="maint-desc">Description</label>
+            <input id="maint-desc" type="text" placeholder="e.g., Replaced battery" />
+          </div>
+          <div class="field">
+            <label for="maint-status">Status</label>
+            <select id="maint-status">
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="maint-next">Next Due</label>
+            <input id="maint-next" type="date" />
+          </div>
+          <div class="actions">
+            <button type="submit" aria-label="Add maintenance log">Add Log</button>
+          </div>
+        </form>
+        <p id="maint-status-msg" class="status"></p>
+        <div class="table-wrapper">
+          <table class="table" id="maint-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Asset</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Next Due</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Assignments</h2>
+        <form id="assign-form" class="grid-2">
+          <div class="field">
+            <label for="assign-asset">Asset</label>
+            <select id="assign-asset"></select>
+          </div>
+          <div class="field">
+            <label for="assign-to">Assignee</label>
+            <input id="assign-to" type="text" placeholder="e.g., John Doe / IT" />
+          </div>
+          <div class="field">
+            <label for="assign-customer">Customer</label>
+            <select id="assign-customer"></select>
+          </div>
+          <div class="field">
+            <label for="assign-start">Start</label>
+            <input id="assign-start" type="date" />
+          </div>
+          <div class="field">
+            <label for="assign-due">Due</label>
+            <input id="assign-due" type="date" />
+          </div>
+          <div class="actions">
+            <button type="submit" aria-label="Add assignment">Add Assignment</button>
+          </div>
+        </form>
+        <p id="assign-status-msg" class="status"></p>
+        <div class="table-wrapper">
+          <table class="table" id="assign-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Asset</th>
+                <th>Assignee</th>
+                <th>Customer</th>
+                <th>Start</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="subclients-card">
+        <h2>Customers</h2>
+        <p class="muted">As a client, manage your own customers to track assets per customer.</p>
+        
+        
+        <div class="field">
+          <label for="new-subclient-name">Customer Name</label>
+          <input id="new-subclient-name" type="text" placeholder="e.g., Branch A / Dept" />
+        </div>
+        <div class="actions">
+          <button id="add-subclient-btn" aria-label="Add customer">Add Customer</button>
+          <span id="subclient-status" class="muted"></span>
+        </div>
+        <ul id="subclient-list" class="asset-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Reports</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="report-start">Start</label>
+            <input id="report-start" type="date" />
+          </div>
+          <div class="field">
+            <label for="report-end">End</label>
+            <input id="report-end" type="date" />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="apply-report-filter" aria-label="Apply report filter">Apply Filter</button>
+        </div>
+        <div class="summary-grid">
+          <div><span class="muted">Total Assets</span><div id="sum-total" class="summary-num">0</div></div>
+          <div><span class="muted">In Stock</span><div id="sum-stock" class="summary-num">0</div></div>
+          <div><span class="muted">Assigned</span><div id="sum-assigned" class="summary-num">0</div></div>
+          <div><span class="muted">Maintenance</span><div id="sum-maint" class="summary-num">0</div></div>
+        </div>
+        <div class="actions">
+          <button id="export-assets-pdf" aria-label="Export assets PDF">Export Assets PDF</button>
+          <button id="export-maint-pdf" class="ghost" aria-label="Export maintenance PDF">Export Maintenance PDF</button>
+          <button id="export-assignments-pdf" class="ghost" aria-label="Export assignments PDF">Export Assignments PDF</button>
+          <button id="export-assets-excel" onclick="window.exportAssetsExcel()" aria-label="Export assets Excel">Export Assets Excel</button>
+          <button id="export-maint-excel" onclick="window.exportMaintenanceExcel()" aria-label="Export maintenance Excel">Export Maintenance Excel</button>
+          <button id="export-assign-excel" onclick="window.exportAssignmentsExcel()" aria-label="Export assignments Excel">Export Assignments Excel</button>
+          <button id="export-assets-doc" class="ghost" onclick="window.exportAssetsDocument()" aria-label="Export assets document">Export Assets Document</button>
+        </div>
+
+        <h3>Scheduled Export</h3>
+        <div class="schedule">
+          <div class="grid-2">
+          <div class="field">
+            <label for="sched-report">Report</label>
+            <select id="sched-report">
+              <option value="assets">Assets</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="assignments">Assignments</option>
+                <option value="logs">Logs</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="sched-frequency">Frequency</label>
+              <select id="sched-frequency">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="sched-time">Time</label>
+              <input id="sched-time" type="time" />
+            </div>
+            <div class="field">
+              <label for="sched-email">Email</label>
+              <input id="sched-email" type="email" placeholder="you@example.com (demo)" />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="save-schedule" aria-label="Save schedule">Save Schedule</button>
+            <span id="schedule-status" class="muted"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Scan Result</h2>
+        <div id="scan-result" class="scan-result muted">Nothing scanned yet.</div>
+      </section>
+
+      <section class="card">
+        <h2>Logs</h2>
+        <table class="table" id="log-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Payload</th>
+              <th>User</th>
+              <th>Role</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="container" style="padding:16px;text-align:center;color:#6b7280;">© BezAsset Tracker</div>
+    </footer>
+
+    
+  <script src="app/branding-loader.js"></script>
+  <script type="module" src="assets/app.js?v=20251105"></script>
+  <script src="assets/exports.js"></script>
+  <script src="assets/install.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').catch(err => console.warn('SW registration failed', err));
+      }
+
+      
+  </script>
+  
+  <!-- NFC modal -->
+  <div id="nfc-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card">
+      <h3>Turn on NFC reader</h3>
+      <p class="muted">Please enable NFC in your device settings to scan or write tags.</p>
+      <div class="modal-actions">
+        <button id="nfc-modal-close" class="button primary" aria-label="Close NFC modal">Got it</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Simple NFC popup handler
+    (function(){
+      const modal = document.getElementById('nfc-modal');
+      const closeBtn = document.getElementById('nfc-modal-close');
+      function showModal(){ if (modal) modal.classList.remove('hidden'); }
+      function hideModal(){ if (modal) modal.classList.add('hidden'); }
+      if (closeBtn) closeBtn.addEventListener('click', hideModal);
+      if (modal) modal.addEventListener('click', (e) => { if (e.target === modal || e.target.classList.contains('modal-backdrop')) hideModal(); });
+      function ensureNfcOrPrompt(){
+        const supported = 'NDEFReader' in window;
+        if (!supported) { showModal(); return false; }
+        return true;
+      }
+      const scanBtn = document.getElementById('scan-btn');
+      const writeBtn = document.getElementById('write-btn');
+      if (scanBtn) scanBtn.addEventListener('click', () => { ensureNfcOrPrompt(); });
+      if (writeBtn) writeBtn.addEventListener('click', () => { ensureNfcOrPrompt(); });
+    })();
+  </script>
+  </html>
